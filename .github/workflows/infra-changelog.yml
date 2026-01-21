@@ -1,0 +1,55 @@
+---
+name: Infra • Changelog PR
+
+# yamllint disable rule:truthy
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  changelog:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Update changelog
+        run: |
+          set -euo pipefail
+          ./scripts/infra/update-changelog.sh
+
+      - name: Create PR if needed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          if git status --porcelain | grep .; then
+            BRANCH="auto/changelog-$(date -u +%Y%m%d%H%M%S)"
+
+            git checkout -b "$BRANCH"
+
+            git config user.name "task-assistant[bot]"
+            git config user.email "task-assistant[bot]@users.noreply.github.com"
+
+            git add CHANGELOG.md
+            git commit -m "chore(infra): update changelog"
+
+            git push origin "$BRANCH"
+
+            gh pr create \
+              --repo "$GITHUB_REPOSITORY" \
+              --base main \
+              --head "$BRANCH" \
+              --title "chore(infra): update changelog" \
+              --body "Automated changelog update generated from merged commits."
+          else
+            echo "No changelog changes detected"
+          fi

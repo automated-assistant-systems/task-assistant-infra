@@ -210,11 +210,11 @@ main() {
   esac
 
   # Optional local validation (fast) if validate script exists
-  if [[ -x "scripts/infra/validate-registry.sh" ]]; then
+  if [[ -x "scripts/infra/validate-registry.v2.sh" ]]; then
     echo "infra: running local registry validation..."
-    ./scripts/infra/validate-registry.sh
+    ./scripts/infra/validate-registry.v2.sh
   else
-    echo "infra: NOTE: scripts/infra/validate-registry.sh not executable; CI will validate"
+    echo "infra: NOTE: scripts/infra/validate-registry.v2.sh not executable; CI will validate"
   fi
 
   echo "infra: done"

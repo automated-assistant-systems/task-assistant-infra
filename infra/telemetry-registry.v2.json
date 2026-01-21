@@ -2,5 +2,17 @@
   "schema_version": "2.0",
   "generated_at": "2026-01-21T00:00:00Z",
   "description": "Authoritative v2 infra registry for Task Assistant (operator-managed).",
-  "orgs": {}
+  "orgs": {
+    "automated-assistant-systems": {
+      "telemetry_repo": "automated-assistant-systems/task-assistant-telemetry",
+      "repos": {
+        "task-assistant-sandbox": {
+          "state": "enabled",
+          "context": "sandbox",
+          "process": "infra-cli",
+          "reason": ""
+        }
+      }
+    }
+  }
 }

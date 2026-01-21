@@ -1,0 +1,40 @@
+---
+name: Infra • Changelog
+
+# yamllint disable rule:truthy
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  changelog:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # required for tags + full history
+
+      - name: Update CHANGELOG.md
+        run: |
+          set -euo pipefail
+          ./scripts/infra/update-changelog.sh
+
+      - name: Commit and push (if changed)
+        run: |
+          set -euo pipefail
+
+          if git status --porcelain | grep .; then
+            git config user.name "task-assistant[bot]"
+            git config user.email "task-assistant[bot]@users.noreply.github.com"
+
+            git add CHANGELOG.md
+            git commit -m "chore(infra): update changelog"
+            git push
+          else
+            echo "No changelog changes"
+          fi

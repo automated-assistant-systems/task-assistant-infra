@@ -23,7 +23,7 @@ set -euo pipefail
 #   - Telemetry repo is required on register unless already present in org config.
 # ─────────────────────────────────────────────────────────────
 
-REGISTRY_FILE="infra/telemetry-registry.json"
+REGISTRY_FILE="infra/telemetry-registry.v2.json"
 
 die() { echo "infra: $*" >&2; exit 1; }
 

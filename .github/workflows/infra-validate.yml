@@ -21,8 +21,10 @@ jobs:
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
-      - name: Validate telemetry registry
-        run: |
-          set -euo pipefail
-          scripts/infra/validate-registry.sh
+      - name: Validate registry (v2 – required)
+        run: ./scripts/infra/validate-registry-v2.sh
+
+      - name: Validate registry (v1 – legacy, non-blocking)
+        run: ./scripts/infra/validate-registry-v1.sh
+        continue-on-error: true
 

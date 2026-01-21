@@ -18,9 +18,18 @@ echo "🔎 Infra changelog (${MODE})"
 # ─────────────────────────────────────────────
 # Detect registry changes
 # ─────────────────────────────────────────────
-if git diff --quiet "${BASE_REF}...${HEAD_REF}" -- "${REGISTRY_FILE}"; then
-  echo "ℹ️ No registry changes detected"
-  exit 0
+if [[ "${MODE}" == "--check" ]]; then
+  # CI mode: compare commits
+  if git diff --quiet "${BASE_REF}...${HEAD_REF}" -- "${REGISTRY_FILE}"; then
+    echo "ℹ️ No registry changes detected"
+    exit 0
+  fi
+else
+  # Generate mode: compare working tree
+  if git diff --quiet -- "${REGISTRY_FILE}"; then
+    echo "ℹ️ No registry changes detected"
+    exit 0
+  fi
 fi
 
 # In check mode, require changelog update

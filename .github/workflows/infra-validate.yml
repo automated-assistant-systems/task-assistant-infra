@@ -1,0 +1,28 @@
+---
+name: Infra • Validate Registry
+
+# yamllint disable rule:truthy
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout infra repo
+        uses: actions/checkout@v4
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Validate telemetry registry
+        run: |
+          set -euo pipefail
+          scripts/infra/validate-registry.sh
+

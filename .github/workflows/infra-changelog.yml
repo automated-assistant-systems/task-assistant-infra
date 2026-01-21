@@ -3,12 +3,12 @@ name: Infra • Changelog
 
 # yamllint disable rule:truthy
 on:
-  push:
+  pull_request:
     branches:
       - main
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   infra_changelog:
@@ -24,28 +24,10 @@ jobs:
           fetch-depth: 0
 
       # ─────────────────────────────────────────────
-      # Generate infra changelog entries
+      # Verify infra changelog correctness
       # ─────────────────────────────────────────────
-      - name: Generate infra changelog
+      - name: Verify infra changelog
         run: |
           set -euo pipefail
 
-          ./scripts/infra/update-infra-changelog.sh
-
-      # ─────────────────────────────────────────────
-      # Commit only if changelog changed
-      # ─────────────────────────────────────────────
-      - name: Commit infra changelog (if changed)
-        run: |
-          set -euo pipefail
-
-          if git status --porcelain | grep .; then
-            git config user.name "task-assistant[bot]"
-            git config user.email "task-assistant[bot]@users.noreply.github.com"
-
-            git add infra/changelog/infra-changelog.jsonl
-            git commit -m "chore(infra): record registry mutation"
-            git push
-          else
-            echo "No infra changelog updates detected"
-          fi
+          ./scripts/infra/update-infra-changelog.sh --check

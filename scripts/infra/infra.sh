@@ -52,6 +52,25 @@ Notes:
 USAGE
 }
 
+require_safe_git_state() {
+  local branch
+  branch="$(git rev-parse --abbrev-ref HEAD)"
+
+  if [[ "$branch" == "main" ]]; then
+    echo "infra: refusing to run on branch 'main'"
+    echo
+    echo "Create or switch to a feature branch first:"
+    echo "  git checkout -b infra/<change-name>"
+    exit 1
+  fi
+
+  if [[ -n "$(git status --porcelain)" ]]; then
+    echo "infra: working tree is dirty"
+    echo "Commit or stash changes before running infra mutations."
+    exit 1
+  fi
+}
+
 ensure_repo_root() {
   [[ -f "$REGISTRY_FILE" ]] || die "expected $REGISTRY_FILE at repo root"
 }
@@ -76,6 +95,7 @@ get_repo_state() {
 main() {
   need_cmd jq
   ensure_repo_root
+  require_safe_git_state
 
   [[ $# -ge 1 ]] || { usage; exit 2; }
 

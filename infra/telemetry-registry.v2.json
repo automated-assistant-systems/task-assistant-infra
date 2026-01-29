@@ -11,6 +11,23 @@
           "context": "sandbox",
           "process": "infra-cli",
           "reason": ""
+        },
+        "task-assistant": {
+          "state": "enabled",
+          "context": "production",
+          "process": "infra-cli",
+          "reason": "Primary Task Assistant repo registered in infra v2"
+        }
+      }
+    },
+    "garybayes": {
+      "telemetry_repo": "garybayes/task-assistant-telemetry",
+      "repos": {
+        "ta-marketplace-install-test": {
+          "state": "enabled",
+          "context": "sandbox",
+          "process": "infra-cli",
+          "reason": "Marketplace install sandbox for Phase 3.4 validation (infra v2)"
         }
       }
     }

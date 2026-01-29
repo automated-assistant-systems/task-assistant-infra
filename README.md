@@ -2,213 +2,270 @@ Task Assistant — Infrastructure Repository
 
 Repository: task-assistant-infra
 System: Task Assistant (GitHub Marketplace App)
-Purpose: Centralized infrastructure state for Task Assistant runtime engines
+Role: Infrastructure registry & enforcement backbone
 Status: Authoritative / Locked
 
 1. Purpose
 
-This repository contains infrastructure-level configuration and registries used by Task Assistant runtime engines.
+This repository defines infrastructure state for the Task Assistant system.
 
-It is not a product repository, not a customer repository, and not an execution environment.
+It is not:
 
-Its sole responsibility is to provide deterministic, auditable inputs to system-level engines (e.g. dashboards, aggregation, future SaaS services).
+a product repository
 
-2. What Lives Here (Authoritative)
+a customer repository
 
-This repository currently contains:
+a runtime or execution environment
 
-telemetry-registry.json
+Its sole responsibility is to provide deterministic, auditable, operator-controlled inputs to Task Assistant engines.
 
+If infrastructure data is wrong, all downstream behavior is invalid.
 
-This file is the single source of truth for:
+2. Infra v2: Source of Truth
 
-Which GitHub organizations participate in Task Assistant telemetry
+This repository operates under Infra v2.
 
-Which telemetry repositories should be scanned
+Infra v2 is:
 
-Which telemetry sources are active vs inactive
+explicit
 
-3. What Does NOT Live Here
+schema-driven
 
-The following must never live in this repository:
+org-scoped
+
+PR-gated
+
+non-inferential
+
+Infra v1 is deprecated and no longer authoritative.
+
+3. What Lives Here (Authoritative)
+Primary Assets
+
+infra/telemetry-registry.v2.json
+The single source of truth for:
+
+which orgs participate
+
+which repos are production vs sandbox
+
+where telemetry is written
+
+whether a repo is enabled or disabled
+
+Operator Tooling
+
+scripts/infra/infra.sh — the only supported mutation interface
+
+scripts/infra/helpers/ — guardrails and workflow helpers:
+
+new-branch.sh
+
+finalize-registry.sh
+
+create-pr.sh
+
+merge-pr.sh
+
+4. What Does Not Live Here
+
+This repository must never contain:
 
 ❌ Runtime code
 ❌ GitHub Actions workflows
 ❌ Telemetry data
 ❌ Customer configuration
-❌ Secrets
-❌ Product logic
-❌ SaaS backend code
+❌ Secrets or credentials
+❌ Product or SaaS logic
 
-This repository is read-only input to engines.
+This repo is read-only input to engines.
 
-4. Telemetry Registry (Authoritative)
+5. Telemetry Registry (v2)
 File
-telemetry-registry.json
+infra/telemetry-registry.v2.json
 
-Responsibility
+What It Defines
 
-The registry declares explicitly and exhaustively which telemetry repositories exist.
+The registry declares explicitly and exhaustively:
+
+participating GitHub orgs
+
+per-org telemetry repositories
+
+registered repos and their context
+
+enabled vs disabled state
 
 The system does not:
 
-Discover repos dynamically
+discover repos dynamically
 
-Scan organizations heuristically
+infer sandbox vs production
 
-Infer participation
+scan orgs heuristically
 
-Query GitHub to “find” telemetry
+“guess” telemetry locations
 
-If a telemetry repo is not listed here, it does not exist to the system.
+If it’s not in the registry, it does not exist.
 
-Schema Versioning
-{
-  "schema_version": "1.0"
-}
+6. Core Enforcement Rules (Non-Negotiable)
+Explicit Context Required
+
+Every repo must declare:
+
+context = sandbox | production
 
 
-Rules:
+No name-based inference. No defaults.
 
-Major version changes are breaking
+Telemetry Is Per-Org
 
-Minor versions must be backward compatible
+A repo:
 
-Engines must refuse unsupported major versions
+<owner>/<repo>
 
-Registry Entry Semantics
 
-Each entry represents one organization-scoped telemetry repository.
+may only write telemetry to:
 
-Example:
+<owner>/<telemetry-repo>
 
-{
-  "org": "automated-assistant-systems",
-  "repo": "task-assistant-telemetry",
-  "visibility": "public",
-  "status": "active",
-  "added_at": "2026-01-10T14:22:00Z",
-  "added_by": "system",
-  "notes": "Primary production org"
-}
 
-Field meanings
-Field	Meaning
-org	GitHub organization name
-repo	Telemetry repository name
-visibility	Informational only (public / private)
-status	active or inactive
-added_at	Audit timestamp
-added_by	system or manual
-notes	Human context (ignored by engines)
-Engine Consumption Rules (Non-Negotiable)
+🚫 Cross-org telemetry is forbidden
+🚫 Shared telemetry across orgs is forbidden
 
-Engines consuming this registry must:
+This prevents data leakage, privilege escalation, and invalid validation.
 
-Ignore unknown fields
+Registry Mutations Are PR-Only
 
-Ignore entries with status != "active"
+All infra changes must follow:
 
-Treat this registry as authoritative
+new branch
+→ infra.sh mutation
+→ finalize-registry.sh
+→ commit
+→ PR
+→ merge
 
-Never mutate this repository
 
-Never infer missing data
+Direct writes to main are blocked by policy.
 
-5. How This Repository Is Used
+7. infra.sh — The Only Mutation Interface
+
+infra.sh is the exclusive way to change infra state.
+
+Supported operations:
+
+register
+
+disable
+
+unregister
+
+Characteristics:
+
+local registry mutation only
+
+no GitHub API calls
+
+explicit operator intent (reason)
+
+enforced schema validation
+
+Manual edits to the registry are prohibited.
+
+8. Helper Scripts (Required Workflow)
+
+Helper scripts exist to prevent operator error:
+
+new-branch.sh
+Ensures mutations never happen on main
+
+finalize-registry.sh
+Validates schema and stages registry changes
+
+create-pr.sh
+Creates PR only from clean feature branches
+
+merge-pr.sh
+Merges safely and deletes branches
+
+Skipping helpers means skipping safety.
+
+9. Sandbox ≠ Reduced Enforcement
+
+Sandbox repos:
+
+are fully enforced
+
+emit real telemetry
+
+must be explicitly registered
+
+must be explicitly reset
+
+Sandbox differs from production only by intent, not behavior.
+
+10. Audit & Traceability
+
+Every registry entry records:
+
+process — what performed the mutation
+
+reason — why it exists
+
+If it cannot be explained later, it should not exist now.
+
+11. How Infra Is Consumed
 Current Consumers
 
 Dashboard Engine
 
-Scans all active telemetry repos
+scans active telemetry repos
 
-Builds aggregated dashboards
+aggregates diagnostics and dashboards
 
-Runs on a scheduled cadence (daily)
+Planned Consumers
 
-Future Consumers (Planned)
-
-SaaS backend ingestion
-
-Cross-org analytics
+SaaS ingestion
 
 Marketplace diagnostics
 
-Compliance & audit tooling
+Compliance and audit tooling
 
-6. Update Policy
-How changes are made
+Cross-org analytics
 
-Changes are made only via Pull Request
+Engines must:
 
-No automated writes
+treat infra as authoritative
 
-No runtime mutation
+refuse unsupported schema versions
 
-When to update the registry
+never mutate this repo
 
-Add a new entry when:
-
-A new organization installs Task Assistant
-
-A telemetry repository is created for that org
-
-Update an entry when:
-
-Telemetry repo is deprecated
-
-Org participation is paused
-
-Never delete entries — use status: inactive.
-
-7. Permissions & Security
-
-This repository is read-only for runtime engines
-
-No secrets are stored here
-
-No credentials are required to consume it
-
-Public visibility is acceptable and intentional
-
-This design ensures:
-
-Marketplace safety
-
-Auditability
-
-Deterministic behavior
-
-Zero risk of data mutation
-
-8. Architectural Rationale
-
-This repository exists to enforce separation of concerns:
-
+12. Architectural Rationale
 Concern	Location
 Product logic	task-assistant
 Runtime execution	GitHub Actions engines
 Customer data	Telemetry repos (per org)
 Infrastructure state	This repository
 
-Registries are infrastructure — not features.
+Infrastructure is not a feature.
+It is a system contract.
 
-9. Non-Goals
+13. Final Word
 
-This repository will never:
+If you don’t have time to do infra correctly,
+you will absolutely have time to debug it later.
 
-Execute workflows
+This repository exists so that:
 
-Store telemetry
+validation is trustworthy
 
-Replace customer configuration
+sandboxes are safe
 
-Act as a SaaS backend
+production is protected
 
-10. Status
+operators don’t guess
 
-This repository is authoritative.
-
-Any runtime behavior not justified by data in this repository is a defect.
-
-Any engine that ignores this registry is invalid.
+Any runtime behavior not justified by infra is a defect.
+Any engine that ignores infra is invalid.

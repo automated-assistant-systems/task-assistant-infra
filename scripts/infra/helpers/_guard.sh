@@ -1,10 +1,25 @@
-# scripts/infra/helpers/_guard.sh
-REPO="$(gh repo view --json name -q .name)"
-[[ "$REPO" == "task-assistant-infra" ]] \
-  || { echo "infra-only helper"; exit 1; }
+#!/usr/bin/env bash
+set -euo pipefail
 
-BRANCH="$(git branch --show-current)"
-[[ "$BRANCH" != "main" ]] \
-  || { echo "refusing to run on main"; exit 1; }
+current_branch="$(git branch --show-current)"
 
-git diff --quiet || { echo "working tree dirty"; exit 1; }
+[[ -n "$current_branch" ]] || {
+  echo "❌ detached HEAD; checkout a branch first" >&2
+  exit 1
+}
+
+if [[ "$current_branch" == "main" ]]; then
+  echo "❌ refusing to mutate infra registry on main" >&2
+  echo "   create a branch first" >&2
+  exit 1
+fi
+
+git diff --quiet || {
+  echo "❌ working tree not clean" >&2
+  exit 1
+}
+
+git diff --cached --quiet || {
+  echo "❌ index not clean" >&2
+  exit 1
+}

@@ -12,37 +12,47 @@ set -euo pipefail
 #   • dirty working tree
 # ─────────────────────────────────────────────
 
-source "$(dirname "$0")/_guard.sh"
-
 BASE_BRANCH="main"
 
 CURRENT_BRANCH="$(git branch --show-current)"
 
-if [[ -z "$CURRENT_BRANCH" ]]; then
+[[ -n "$CURRENT_BRANCH" ]] || {
   echo "❌ Unable to determine current branch"
   exit 1
-fi
+}
 
 if [[ "$CURRENT_BRANCH" == "$BASE_BRANCH" ]]; then
   echo "❌ Refusing to create PR from '$BASE_BRANCH'"
-  echo "   Create a feature branch first."
   exit 1
 fi
 
-if ! git diff --quiet || ! git diff --cached --quiet; then
+git diff --quiet && git diff --cached --quiet || {
   echo "❌ Working tree is dirty"
-  echo "   Commit or stash changes before creating a PR."
+  exit 1
+}
+
+if ! git rev-parse --verify "$BASE_BRANCH" >/dev/null 2>&1; then
+  echo "❌ Base branch '$BASE_BRANCH' does not exist locally"
   exit 1
 fi
 
-if ! command -v gh >/dev/null; then
+COMMITS_AHEAD="$(git rev-list --count "$BASE_BRANCH..HEAD")"
+
+if [[ "$COMMITS_AHEAD" -eq 0 ]]; then
+  echo "❌ No commits to merge into $BASE_BRANCH"
+  echo "   Did you forget to commit?"
+  exit 1
+fi
+
+command -v gh >/dev/null || {
   echo "❌ gh CLI is required"
   exit 1
-fi
+}
 
 echo "📦 Creating PR"
 echo "• Branch: $CURRENT_BRANCH"
 echo "• Base:   $BASE_BRANCH"
+echo "• Commits ahead: $COMMITS_AHEAD"
 echo
 
 gh pr create --base "$BASE_BRANCH"

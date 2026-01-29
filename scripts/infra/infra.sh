@@ -19,6 +19,9 @@ set -euo pipefail
 #   infra/telemetry-registry.v2.json
 # ─────────────────────────────────────────────────────────────
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+"$SCRIPT_DIR/helpers/_guard.sh"
+
 REGISTRY_FILE="infra/telemetry-registry.v2.json"
 
 die() { echo "infra: $*" >&2; exit 1; }

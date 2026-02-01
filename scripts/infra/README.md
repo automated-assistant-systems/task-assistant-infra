@@ -62,7 +62,6 @@ This file is **manually mutated via controlled scripts only**.
 
 ## Registry Structure (Conceptual)
 
-```json
 {
   "orgs": {
     "<org>": {
@@ -78,7 +77,8 @@ This file is **manually mutated via controlled scripts only**.
     }
   }
 }
-Key Rules
+
+### Key Rules
 Telemetry repositories are per org
 
 A repo may not write telemetry to another org
@@ -87,25 +87,19 @@ Context is explicit — never inferred from naming
 
 All registry mutations are intentional and auditable
 
-Infra v2 Rules (Non-Negotiable)
+### Infra v2 Rules (Non-Negotiable)
 1. Explicit Context
 Every registered repo must declare:
 
-diff
-Copy code
 --context sandbox | production
 No name-based inference is allowed.
 
 2. Telemetry Ownership Enforcement
 A repository:
 
-php-template
-Copy code
 <owner>/<repo>
 may only write telemetry to:
 
-php-template
-Copy code
 <owner>/<telemetry-repo>
 Cross-org telemetry writes are forbidden.
 
@@ -125,16 +119,14 @@ CI validates schema correctness
 
 GitHub enforces review and merge rules
 
-Primary Scripts
+## Primary Scripts
 scripts/infra/infra.sh
 Purpose
 
 Authoritative CLI for mutating the infra registry.
 
-Supported Commands
+### Supported Commands
 
-bash
-Copy code
 infra.sh register <org>/<repo> \
   --context <sandbox|production> \
   [--telemetry-repo <org>/<repo>] \
@@ -207,16 +199,19 @@ auto-detects PR for current branch
 
 uses squash + delete branch
 
-Standard Infra Workflow
+## Standard Infra Workflow
 Registering a Repository
-bash
-Copy code
+
 scripts/infra/helpers/new-branch.sh infra/register-example
 
-scripts/infra/infra.sh register <org>/<repo> \
+scripts/infra/infra.sh register \
+  --<org> \
+  --<repo> \
   --context sandbox \
-  --telemetry-repo <org>/<telemetry-repo> \
+  --telemetry <telemetry-repo> \
   --reason "Why this repo exists"
+
+git add infra/telemetry-registry.v2.json
 
 scripts/infra/helpers/finalize-registry.sh
 
@@ -225,7 +220,8 @@ git push -u origin infra/register-example
 
 scripts/infra/helpers/create-pr.sh
 scripts/infra/helpers/merge-pr.sh
-Sandbox vs Production
+
+## Sandbox vs Production
 Aspect	Sandbox	Production
 Purpose	Testing / validation	Marketplace / live use
 Telemetry	Required	Required
@@ -235,7 +231,7 @@ Safety	Resettable	Immutable
 Sandbox does not mean “less strict.”
 It means explicitly non-production.
 
-Why Infra v1 Was Deprecated
+## Why Infra v1 Was Deprecated
 Infra v1 relied on:
 
 repo name inference
@@ -254,7 +250,7 @@ support deterministic validation
 
 scale beyond Phase 3.4
 
-Operator Responsibilities
+## Operator Responsibilities
 If you touch infra:
 
 you are changing system behavior
@@ -268,7 +264,7 @@ you must review diffs carefully
 Infra mistakes are silent but catastrophic.
 The process is strict by design.
 
-Final Principle
+## Final Principle
 If infra is wrong, everything downstream lies.
 
 This repository exists to make infra boring, explicit, and correct.

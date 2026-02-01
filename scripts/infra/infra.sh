@@ -79,6 +79,8 @@ ensure_repo_root() {
 }
 
 write_registry() {
+  jq -e '.schema_version | startswith("2.")' "$REGISTRY_FILE" \
+    || die "registry corruption detected: schema_version missing"
   local tmp
   tmp="$(mktemp)"
   jq "$@" "$REGISTRY_FILE" > "$tmp"
@@ -142,29 +144,27 @@ main() {
       repo_exists && die "repo already registered: $OWNER/$REPO"
 
       write_registry '
-        .orgs as $orgs
-        | (if .orgs[$o] == null then
-             .orgs[$o] = { telemetry_repo: $t, repos: {} }
-           else
-             .orgs[$o]
-           end)
-        | (if .orgs[$o].telemetry_repo == null then
-             .orgs[$o].telemetry_repo = $t
-           else
-             .
-           end)
-        | .orgs[$o].repos[$r] = {
-            "state": "enabled",
-            "context": $c,
-            "process": "infra-cli",
-            "reason": ($reason // "")
-          }
-      ' \
-        --arg o "$OWNER" \
-        --arg r "$REPO" \
-        --arg t "$TELEMETRY" \
-        --arg c "$CONTEXT" \
-        --arg reason "$REASON"
+        . as $root
+        | .orgs = (
+            .orgs // {}
+            | (if .[$o] == null then
+                 .[$o] = { telemetry_repo: ($o + "/" + $t), repos: {} }
+               else
+                 .
+               end)
+            | (if .[$o].telemetry_repo == null then
+                 .[$o].telemetry_repo = ($o + "/" + $t)
+               else
+                 .
+               end)
+            | .[$o].repos[$r] = {
+                "state": "enabled",
+                "context": $c,
+                "process": "infra-cli",
+                "reason": ($reason // "")
+              }
+          )
+      '
 
       echo "infra: registered $CONTEXT repo $OWNER/$REPO"
       ;;

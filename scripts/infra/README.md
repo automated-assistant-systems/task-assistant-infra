@@ -217,6 +217,7 @@ scripts/infra/infra.sh register <org>/<repo> \
 scripts/infra/helpers/finalize-registry.sh
 
 git commit -m "infra: register <org>/<repo>"
+git push -u origin infra/register-example
 
 scripts/infra/helpers/create-pr.sh
 scripts/infra/helpers/merge-pr.sh

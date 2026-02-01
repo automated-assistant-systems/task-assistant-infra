@@ -2,14 +2,22 @@
 set -euo pipefail
 
 # ─────────────────────────────────────────────
-# finalize-registry.sh
+# finalize-registry.sh (STAGED-ONLY)
 #
 # Purpose:
 #   Final safety gate before infra PR creation.
-#   Validates, enforces, and stages registry changes.
+#   Validates the *staged* registry change only.
 #
-# Aligned with:
-#   README.md (Infra v2 authoritative rules)
+# Guarantees:
+#   • No file mutations
+#   • No staging
+#   • No commits
+#   • No execution on main
+#
+# Operator must:
+#   1) run infra.sh
+#   2) git add infra/telemetry-registry.v2.json
+#   3) run this script
 # ─────────────────────────────────────────────
 
 REGISTRY="infra/telemetry-registry.v2.json"
@@ -38,64 +46,71 @@ if [[ "$CURRENT_BRANCH" == "$BASE_BRANCH" ]]; then
 fi
 
 # ─────────────────────────────────────────────
-# Dirty tree check
+# Staging guards
 # ─────────────────────────────────────────────
+
+# Registry must be staged
+git diff --cached --name-only | grep -qx "$REGISTRY" \
+  || die "registry file is not staged: $REGISTRY"
+
+# No other files may be staged
+EXTRA_STAGED="$(git diff --cached --name-only | grep -v "^$REGISTRY$" || true)"
+[[ -z "$EXTRA_STAGED" ]] || die "only $REGISTRY may be staged"
+
+# No unstaged changes allowed
 git diff --quiet || die "working tree has unstaged changes"
-git diff --cached --quiet || true
-
-# Registry must be modified
-git diff --name-only | grep -q "^$REGISTRY$" \
-  || die "registry file not modified: $REGISTRY"
-
-# No other files allowed
-EXTRA_CHANGES="$(git diff --name-only | grep -v "^$REGISTRY$" || true)"
-[[ -z "$EXTRA_CHANGES" ]] || die "only $REGISTRY may be modified"
 
 # ─────────────────────────────────────────────
+# Validate staged content
+# ─────────────────────────────────────────────
+
+echo "🔎 Validating staged telemetry registry (v2)..."
+
+STAGED_JSON="$(git show ":$REGISTRY")"
+
 # Schema validation
-# ─────────────────────────────────────────────
-[[ -x scripts/infra/validate-registry-v2.sh ]] \
-  || die "missing validate-registry-v2.sh"
-
-echo "🔎 Validating telemetry registry (v2)..."
-scripts/infra/validate-registry-v2.sh
+if [[ -x scripts/infra/validate-registry-v2.sh ]]; then
+  printf '%s\n' "$STAGED_JSON" | scripts/infra/validate-registry-v2.sh --stdin
+else
+  die "missing validate-registry-v2.sh"
+fi
 
 # ─────────────────────────────────────────────
 # Explicit context enforcement
 # ─────────────────────────────────────────────
 echo "🔒 Enforcing explicit repo context..."
 
-jq -e '
+printf '%s\n' "$STAGED_JSON" | jq -e '
   .orgs
   | to_entries[]
   | .value.repos
   | to_entries[]
   | select(.value.context != "sandbox" and .value.context != "production")
-' "$REGISTRY" >/dev/null && die "repo missing valid context (sandbox|production)"
+' >/dev/null && die "repo missing valid context (sandbox|production)"
 
 # ─────────────────────────────────────────────
 # Cross-org telemetry enforcement
 # ─────────────────────────────────────────────
 echo "🛑 Enforcing per-org telemetry isolation..."
 
-jq -e '
+printf '%s\n' "$STAGED_JSON" | jq -e '
   .orgs
   | to_entries[]
   | .key as $org
   | .value.telemetry_repo as $telemetry
   | select($telemetry != null)
   | select($telemetry | startswith($org + "/") | not)
-' "$REGISTRY" >/dev/null && die "cross-org telemetry detected"
+' >/dev/null && die "cross-org telemetry detected"
 
 # ─────────────────────────────────────────────
-# Stage registry
+# Success
 # ─────────────────────────────────────────────
-git add "$REGISTRY"
-
 echo
-echo "✅ Infra registry finalized"
-echo "• Branch:  $CURRENT_BRANCH"
-echo "• File:    $REGISTRY"
+echo "✅ Infra registry finalized (staged-only)"
+echo "• Branch: $CURRENT_BRANCH"
+echo "• File:   $REGISTRY"
 echo
 echo "Next steps:"
+echo "  git commit -m \"infra: <describe change>\""
+echo "  git push"
 echo "  scripts/infra/helpers/create-pr.sh"

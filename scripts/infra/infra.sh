@@ -144,27 +144,30 @@ main() {
       repo_exists && die "repo already registered: $OWNER/$REPO"
 
       write_registry '
-        . as $root
-        | .orgs = (
-            .orgs // {}
-            | (if .[$o] == null then
-                 .[$o] = { telemetry_repo: ($o + "/" + $t), repos: {} }
-               else
-                 .
-               end)
-            | (if .[$o].telemetry_repo == null then
-                 .[$o].telemetry_repo = ($o + "/" + $t)
-               else
-                 .
-               end)
-            | .[$o].repos[$r] = {
-                "state": "enabled",
-                "context": $c,
-                "process": "infra-cli",
-                "reason": ($reason // "")
-              }
-          )
-      '
+        .orgs = (
+          .orgs // {}
+          | (if .[$o] == null then
+               .[$o] = { telemetry_repo: ($o + "/" + $t), repos: {} }
+             else .
+             end)
+          | (if .[$o].telemetry_repo == null then
+               .[$o].telemetry_repo = ($o + "/" + $t)
+             else .
+             end)
+          | .[$o].repos[$r] = {
+              "state": "enabled",
+              "context": $c,
+              "process": "infra-cli",
+              "reason": ($reason // "")
+            }
+        )
+      ' \
+        --arg o "$OWNER" \
+        --arg r "$REPO" \
+        --arg t "$TELEMETRY" \
+        --arg c "$CONTEXT" \
+        --arg reason "$REASON"
+
 
       echo "infra: registered $CONTEXT repo $OWNER/$REPO"
       ;;

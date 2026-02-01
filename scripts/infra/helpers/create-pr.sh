@@ -44,6 +44,9 @@ if [[ "$COMMITS_AHEAD" -eq 0 ]]; then
   exit 1
 fi
 
+git rev-parse --abbrev-ref --symbolic-full-name @{u} \
+  || { echo "❌ Branch not pushed. Run git push first."; exit 1; }
+
 command -v gh >/dev/null || {
   echo "❌ gh CLI is required"
   exit 1

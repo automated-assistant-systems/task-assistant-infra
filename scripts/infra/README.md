@@ -1,65 +1,68 @@
-ask Assistant Infra Registry (v2)
-Purpose
+# Task Assistant Infra Registry (v2)
 
-The infra registry defines the authoritative relationship between:
+## Purpose
 
-repositories
+The infra registry defines the **authoritative relationship** between:
 
-their execution context (sandbox vs production)
-
-their telemetry destination
+- repositories  
+- their execution context (`sandbox` vs `production`)  
+- their telemetry destination  
 
 This registry exists to ensure:
 
-deterministic telemetry routing
+- deterministic telemetry routing  
+- strict separation between sandbox and production  
+- prevention of cross-organization telemetry writes  
+- reproducible validation and enforcement behavior  
 
-strict separation between sandbox and production
-
-prevention of cross-organization telemetry writes
-
-reproducible validation and enforcement behavior
-
-Infra v2 is the single source of truth.
+**Infra v2 is the single source of truth.**  
 Infra v1 is deprecated and no longer used for resolution.
 
-What This Repository Controls
+---
 
-This repository does not run engines or workflows.
+## What This Repository Controls
+
+This repository **does not run engines or workflows**.
 
 It controls:
 
-which repositories are considered active
+- which repositories are considered active  
+- whether a repository is sandbox or production  
+- which telemetry repository each org writes to  
+- whether a repo is enabled or disabled  
+- how engines resolve infra context during execution  
 
-whether a repository is sandbox or production
+All engines, validation scripts, and dashboards consume infra data **indirectly**.
 
-which telemetry repository each org writes to
+---
 
-whether a repo is enabled or disabled
+## Registry File
 
-how engines resolve infra context during execution
-
-All engines, validation scripts, and dashboards consume infra data indirectly.
-
-Registry File
-
-Path
+**Path**
 
 infra/telemetry-registry.v2.json
 
+yaml
+Copy code
 
-Responsibilities
+---
 
-Defines org-level telemetry routing
+## Responsibilities
 
-Defines repo-level execution context
+The registry:
 
-Blocks cross-org telemetry writes
+- defines org-level telemetry routing  
+- defines repo-level execution context  
+- blocks cross-org telemetry writes  
+- provides immutable audit metadata (`process`, `reason`)  
 
-Provides immutable audit metadata (process, reason)
+This file is **manually mutated via controlled scripts only**.
 
-This file is manually mutated via controlled scripts only.
+---
 
-Registry Structure (Conceptual)
+## Registry Structure (Conceptual)
+
+```json
 {
   "orgs": {
     "<org>": {
@@ -75,10 +78,8 @@ Registry Structure (Conceptual)
     }
   }
 }
-
 Key Rules
-
-Telemetry repos are per org
+Telemetry repositories are per org
 
 A repo may not write telemetry to another org
 
@@ -88,30 +89,27 @@ All registry mutations are intentional and auditable
 
 Infra v2 Rules (Non-Negotiable)
 1. Explicit Context
-
 Every registered repo must declare:
 
+diff
+Copy code
 --context sandbox | production
-
-
 No name-based inference is allowed.
 
 2. Telemetry Ownership Enforcement
-
 A repository:
 
+php-template
+Copy code
 <owner>/<repo>
-
-
 may only write telemetry to:
 
+php-template
+Copy code
 <owner>/<telemetry-repo>
-
-
 Cross-org telemetry writes are forbidden.
 
 3. Registry Mutations Require a Branch
-
 No registry edits on main
 
 All changes go through PRs
@@ -119,94 +117,100 @@ All changes go through PRs
 All changes are validated before merge
 
 4. Infra Is Operator-Only
-
 infra.sh does not call GitHub APIs
 
 It mutates local files only
 
 CI validates schema correctness
 
-GitHub enforces review + merge rules
+GitHub enforces review and merge rules
 
 Primary Scripts
 scripts/infra/infra.sh
-
 Purpose
+
 Authoritative CLI for mutating the infra registry.
 
 Supported Commands
 
-infra.sh register <org>/<repo> --context <sandbox|production> [--telemetry-repo <org>/<repo>] [--reason <text>]
-infra.sh disable  <org>/<repo> [--reason <text>]
-infra.sh unregister <org>/<repo> --confirm-delete [--reason <text>]
+bash
+Copy code
+infra.sh register <org>/<repo> \
+  --context <sandbox|production> \
+  [--telemetry-repo <org>/<repo>] \
+  [--reason <text>]
 
+infra.sh disable <org>/<repo> [--reason <text>]
 
+infra.sh unregister <org>/<repo> \
+  --confirm-delete \
+  [--reason <text>]
 What It Enforces
 
-Explicit context
+explicit context
 
-Telemetry ownership
+telemetry ownership
 
-Registry schema correctness
+registry schema correctness
 
-No implicit defaults
+no implicit defaults
 
 scripts/infra/helpers/new-branch.sh
-
 Creates a correctly named feature branch.
 
 Rules
 
-Must be run from main
+must be run from main
 
-Refuses if working tree is dirty
+refuses if working tree is dirty
 
-Standardizes branch creation
+standardizes branch creation
 
 scripts/infra/helpers/finalize-registry.sh
-
 Required before committing registry changes.
 
 What It Does
 
-Refuses to run on main
+refuses to run on main
 
-Verifies registry was modified
+verifies registry was modified
 
-Validates v2 schema
+validates v2 schema
 
-Enforces telemetry ownership
+enforces telemetry ownership
 
-Stages registry file
+stages registry file
 
-Confirms clean working tree
+confirms clean working tree
 
 This script prevents accidental or incomplete infra changes.
 
 scripts/infra/helpers/create-pr.sh
-
 Creates a PR from the current branch.
 
 Refuses if
 
-On main
+on main
 
-Working tree is dirty
+working tree is dirty
 
-No commits exist
+no commits exist
+
+branch is not pushed
 
 scripts/infra/helpers/merge-pr.sh
+Safely merges a PR via gh.
 
-Merges a PR safely via gh.
+accepts PR number, or
 
-Accepts PR number, or
+auto-detects PR for current branch
 
-Auto-detects PR for current branch
-
-Uses squash + delete branch
+uses squash + delete branch
 
 Standard Infra Workflow
-Registering a Repo
+Registering a Repository
+bash
+Copy code
 scripts/infra/helpers/new-branch.sh infra/register-example
 
 scripts/infra/infra.sh register <org>/<repo> \
@@ -221,7 +225,6 @@ git push -u origin infra/register-example
 
 scripts/infra/helpers/create-pr.sh
 scripts/infra/helpers/merge-pr.sh
-
 Sandbox vs Production
 Aspect	Sandbox	Production
 Purpose	Testing / validation	Marketplace / live use
@@ -233,7 +236,6 @@ Sandbox does not mean “less strict.”
 It means explicitly non-production.
 
 Why Infra v1 Was Deprecated
-
 Infra v1 relied on:
 
 repo name inference
@@ -253,22 +255,20 @@ support deterministic validation
 scale beyond Phase 3.4
 
 Operator Responsibilities
-
 If you touch infra:
 
-You are changing system behavior
+you are changing system behavior
 
-You must document intent (reason)
+you must document intent (reason)
 
-You must use the helpers
+you must use the helpers
 
-You must review diffs carefully
+you must review diffs carefully
 
 Infra mistakes are silent but catastrophic.
 The process is strict by design.
 
 Final Principle
-
 If infra is wrong, everything downstream lies.
 
 This repository exists to make infra boring, explicit, and correct.

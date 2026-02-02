@@ -20,8 +20,8 @@ set -euo pipefail
 ROOT_DIR="$(git rev-parse --show-toplevel)"
 cd "$ROOT_DIR"
 
-REGISTRY="$ROOT_DIR/infra/telemetry-registry.v2.json"
-CHANGELOG="$ROOT_DIR/infra/changelog/infra-changelog.jsonl"
+REGISTRY="infra/telemetry-registry.v2.json"
+CHANGELOG="infra/changelog/infra-changelog.jsonl"
 
 die() { echo "❌ infra: $*" >&2; exit 1; }
 pass() { echo "✅ $*"; }

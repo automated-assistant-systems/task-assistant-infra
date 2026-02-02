@@ -55,6 +55,9 @@ echo
 
 scripts/infra/infra.sh "$@"
 
+# Re-anchor working directory (infra.sh may change CWD)
+cd "$ROOT_DIR"
+
 # ------------------------------------------------------------
 # Postconditions (hard guarantees)
 # ------------------------------------------------------------

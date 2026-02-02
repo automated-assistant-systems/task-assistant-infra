@@ -45,7 +45,12 @@ if [[ "$COMMITS_AHEAD" -eq 0 ]]; then
 fi
 
 git rev-parse --abbrev-ref --symbolic-full-name @{u} \
-  || { echo "❌ Branch not pushed. Run git push first."; exit 1; }
+  || { 
+    echo "❌ infra: branch '$CURRENT_BRANCH' is not pushed"
+    echo "Run:"
+    echo "  git push -u origin $CURRENT_BRANCH"
+    exit 1
+  }
 
 command -v gh >/dev/null || {
   echo "❌ gh CLI is required"

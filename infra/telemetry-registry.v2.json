@@ -28,12 +28,6 @@
           "context": "sandbox",
           "process": "infra-cli",
           "reason": "Marketplace install sandbox for Phase 3.4 validation (infra v2)"
-        },
-        "ta-sandbox": {
-          "state": "enabled",
-          "context": "sandbox",
-          "process": "infra-cli",
-          "reason": "Phase 3.4 validation sandbox onboarding"
         }
       }
     }

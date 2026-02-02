@@ -49,15 +49,21 @@ fi
 # Staging guards
 # ─────────────────────────────────────────────
 
+STAGED="$(git diff --cached --name-only)"
+
 # Registry must be staged
-git diff --cached --name-only | grep -qx "$REGISTRY" \
+echo "$STAGED" | grep -qx "$REGISTRY" \
   || die "registry file is not staged: $REGISTRY"
 
-# No other files may be staged
-EXTRA_STAGED="$(git diff --cached --name-only | grep -v "^$REGISTRY$" || true)"
-[[ -z "$EXTRA_STAGED" ]] || die "only $REGISTRY may be staged"
+# Changelog must be staged
+echo "$STAGED" | grep -qx "infra/changelog/infra-changelog.jsonl" \
+  || die "infra changelog not staged"
 
-# No unstaged changes allowed
+# No other files allowed
+EXTRA_STAGED="$(echo "$STAGED" | grep -Ev "^($REGISTRY|infra/changelog/infra-changelog.jsonl)$" || true)"
+[[ -z "$EXTRA_STAGED" ]] || die "unexpected staged files: $EXTRA_STAGED"
+
+# No unstaged changes
 git diff --quiet || die "working tree has unstaged changes"
 
 # ─────────────────────────────────────────────
@@ -112,5 +118,7 @@ echo "• File:   $REGISTRY"
 echo
 echo "Next steps:"
 echo "  git commit -m \"infra: <describe change>\""
-echo "  git push"
+echo "  git push -u origin $CURRENT_BRANCH"
 echo "  scripts/infra/helpers/create-pr.sh"
+echo "  scripts/infra/helpers/merge-pr.sh"
+echo

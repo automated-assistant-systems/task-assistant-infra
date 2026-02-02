@@ -55,6 +55,33 @@ Notes:
 USAGE
 }
 
+CHANGELOG_FILE="infra/changelog/infra-changelog.jsonl"
+
+append_changelog() {
+  local ts
+  ts="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+
+  jq -n \
+    --arg timestamp "$ts" \
+    --arg action "$CMD" \
+    --arg owner "$OWNER" \
+    --arg repo "$REPO" \
+    --arg context "${CONTEXT:-}" \
+    --arg telemetry_repo "${TELEMETRY:-}" \
+    --arg reason "${REASON:-}" \
+    '{
+      timestamp: $timestamp,
+      action: $action,
+      owner: $owner,
+      repo: $repo,
+      telemetry_repo: ($telemetry_repo | select(length > 1)),
+      context: ($context | select(length > 0)),
+      reason: ($reason | select(length > 0)),
+      process: "infra-cli",
+      schema_version: "2.0"
+    }' >> "$CHANGELOG_FILE"
+}
+
 require_safe_git_state() {
   local branch
   branch="$(git rev-parse --abbrev-ref HEAD)"
@@ -168,6 +195,7 @@ main() {
         --arg c "$CONTEXT" \
         --arg reason "$REASON"
 
+      append_changelog
 
       echo "infra: registered $CONTEXT repo $OWNER/$REPO"
       ;;
@@ -181,6 +209,8 @@ main() {
         | (if $reason != null then .orgs[$o].repos[$r].reason = $reason else . end)
       ' --arg o "$OWNER" --arg r "$REPO" --arg reason "$REASON"
 
+      append_changelog
+
       echo "infra: disabled repo $OWNER/$REPO"
       ;;
 
@@ -190,6 +220,8 @@ main() {
 
       write_registry 'del(.orgs[$o].repos[$r])' \
         --arg o "$OWNER" --arg r "$REPO"
+
+      append_changelog
 
       echo "infra: unregistered repo $OWNER/$REPO"
       ;;

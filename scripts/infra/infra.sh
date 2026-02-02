@@ -59,9 +59,12 @@ append_changelog() {
   local ts
   ts="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
-  echo "infra: appending changelog entry ($action)"
+  # Ensure newline before append (JSONL safety)
+  if [[ -s "$CHANGELOG_FILE" ]] && tail -c1 "$CHANGELOG_FILE" | read -r _; then
+    echo >> "$CHANGELOG_FILE"
+  fi
 
-  jq -n \
+  jq -c -n \
     --arg timestamp "$ts" \
     --arg action "$action" \
     --arg owner "$OWNER" \
@@ -80,10 +83,6 @@ append_changelog() {
       process: "infra-cli",
       schema_version: "2.0"
     }' >> "$CHANGELOG_FILE"
-
-    # 🔑 REQUIRED for JSONL correctness
-    echo >> "$CHANGELOG_FILE"
-
 }
 
 write_registry() {

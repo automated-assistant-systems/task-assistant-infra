@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automated-assistant-systems.com/schemas/infra-changelog.schema.json",
+  "title": "Task Assistant Infra Changelog Entry",
+  "description": "Schema for a single JSONL entry in infra-changelog.jsonl",
+  "type": "object",
+  "required": [
+    "timestamp",
+    "action",
+    "owner",
+    "repo",
+    "process",
+    "schema_version"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC timestamp when the infra action occurred"
+    },
+    "action": {
+      "type": "string",
+      "enum": ["register", "disable", "unregister"],
+      "description": "Infra operation performed"
+    },
+    "owner": {
+      "type": "string",
+      "minLength": 1,
+      "description": "GitHub organization or user that owns the repo"
+    },
+    "repo": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Repository name"
+    },
+    "context": {
+      "type": "string",
+      "enum": ["sandbox", "production"],
+      "description": "Operational context of the repo",
+      "nullable": true
+    },
+    "telemetry_repo": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Telemetry repository name (repo-only, owner derived)",
+      "nullable": true
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Operator-provided rationale for the change",
+      "nullable": true
+    },
+    "process": {
+      "type": "string",
+      "const": "infra-cli",
+      "description": "Process that generated the changelog entry"
+    },
+    "schema_version": {
+      "type": "string",
+      "pattern": "^2\\.0$",
+      "description": "Infra changelog schema version"
+    }
+  }
+}
+

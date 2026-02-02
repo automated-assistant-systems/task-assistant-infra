@@ -73,6 +73,8 @@ LOG_LINES_AFTER="$(wc -l < "$CHANGELOG")"
 [[ "$LOG_LINES_AFTER" -gt "$LOG_LINES_BEFORE" ]] \
   || die "infra changelog was NOT appended"
 
+scripts/infra/validate-changelog.sh
+
 pass "Registry mutated and changelog appended"
 
 # ------------------------------------------------------------

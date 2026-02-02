@@ -81,6 +81,9 @@ else
   die "missing validate-registry-v2.sh"
 fi
 
+echo "🔎 Validating infra changelog..."
+scripts/infra/validate-changelog.sh
+
 # ─────────────────────────────────────────────
 # Explicit context enforcement
 # ─────────────────────────────────────────────
@@ -115,10 +118,4 @@ echo
 echo "✅ Infra registry finalized (staged-only)"
 echo "• Branch: $CURRENT_BRANCH"
 echo "• File:   $REGISTRY"
-echo
-echo "Next steps:"
-echo "  git commit -m \"infra: <describe change>\""
-echo "  git push -u origin $CURRENT_BRANCH"
-echo "  scripts/infra/helpers/create-pr.sh"
-echo "  scripts/infra/helpers/merge-pr.sh"
 echo

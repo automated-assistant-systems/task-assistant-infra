@@ -55,6 +55,9 @@ echo
 
 scripts/infra/infra.sh "$@"
 
+tail -n 1 "$CHANGELOG" | jq . >/dev/null \
+  || die "last changelog entry is not valid JSON"
+
 # Re-anchor working directory (infra.sh may change CWD)
 cd "$ROOT_DIR"
 

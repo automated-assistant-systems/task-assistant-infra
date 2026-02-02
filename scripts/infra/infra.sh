@@ -81,7 +81,9 @@ append_changelog() {
       schema_version: "2.0"
     }' >> "$CHANGELOG_FILE"
 
-  sync
+    # 🔑 REQUIRED for JSONL correctness
+    echo >> "$CHANGELOG_FILE"
+
 }
 
 write_registry() {

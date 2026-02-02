@@ -23,91 +23,67 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 "$SCRIPT_DIR/helpers/_guard.sh"
 
 REGISTRY_FILE="infra/telemetry-registry.v2.json"
+CHANGELOG_FILE="infra/changelog/infra-changelog.jsonl"
 
 die() { echo "infra: $*" >&2; exit 1; }
 need_cmd() { command -v "$1" >/dev/null 2>&1 || die "missing required command: $1"; }
 
+need_cmd jq
+need_cmd git
+
 usage() {
   cat >&2 <<'USAGE'
 Usage:
-  ./scripts/infra/infra.sh register \
-    --owner <org> \
-    --repo <repo> \
-    --telemetry <telemetry-repo-name> \
-    --context <sandbox|production> \
-    [--reason <text>]
-
-  ./scripts/infra/infra.sh disable \
-    --owner <org> \
-    --repo <repo> \
-    [--reason <text>]
-
-  ./scripts/infra/infra.sh unregister \
-    --owner <org> \
-    --repo <repo> \
-    --confirm-delete \
-    [--reason <text>]
-
-Notes:
-  • --telemetry is repo-name ONLY (owner is derived)
-  • Cross-org telemetry is not supported by design
-  • Registry is validated locally if validation script exists
+  infra.sh register   --owner <org> --repo <repo> --telemetry <repo> --context <sandbox|production> [--reason <text>]
+  infra.sh disable    --owner <org> --repo <repo> [--reason <text>]
+  infra.sh unregister --owner <org> --repo <repo> --confirm-delete [--reason <text>]
 USAGE
 }
 
-CHANGELOG_FILE="infra/changelog/infra-changelog.jsonl"
+require_safe_git_state() {
+  [[ "$(git rev-parse --abbrev-ref HEAD)" != "main" ]] \
+    || die "refusing to run on main"
+
+  [[ -z "$(git status --porcelain)" ]] \
+    || die "working tree must be clean"
+}
+
+ensure_repo_root() {
+  [[ -f "$REGISTRY_FILE" ]] || die "missing $REGISTRY_FILE"
+  mkdir -p "$(dirname "$CHANGELOG_FILE")"
+  [[ -f "$CHANGELOG_FILE" ]] || touch "$CHANGELOG_FILE"
+}
 
 append_changelog() {
+  local action="$1"
   local ts
   ts="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
   jq -n \
     --arg timestamp "$ts" \
-    --arg action "$CMD" \
+    --arg action "$action" \
     --arg owner "$OWNER" \
     --arg repo "$REPO" \
     --arg context "${CONTEXT:-}" \
-    --arg telemetry_repo "${TELEMETRY:-}" \
+    --arg telemetry "$TELEMETRY" \
     --arg reason "${REASON:-}" \
     '{
       timestamp: $timestamp,
       action: $action,
       owner: $owner,
       repo: $repo,
-      telemetry_repo: ($telemetry_repo | select(length > 1)),
       context: ($context | select(length > 0)),
+      telemetry_repo: ($telemetry | select(length > 0)),
       reason: ($reason | select(length > 0)),
       process: "infra-cli",
       schema_version: "2.0"
     }' >> "$CHANGELOG_FILE"
 }
 
-require_safe_git_state() {
-  local branch
-  branch="$(git rev-parse --abbrev-ref HEAD)"
-
-  if [[ "$branch" == "main" ]]; then
-    echo "infra: refusing to run on branch 'main'"
-    echo
-    echo "Create or switch to a feature branch first:"
-    echo "  git checkout -b infra/<change-name>"
-    exit 1
-  fi
-
-  if [[ -n "$(git status --porcelain)" ]]; then
-    echo "infra: working tree is dirty"
-    echo "Commit or stash changes before running infra mutations."
-    exit 1
-  fi
-}
-
-ensure_repo_root() {
-  [[ -f "$REGISTRY_FILE" ]] || die "expected $REGISTRY_FILE at repo root"
-}
-
 write_registry() {
   jq -e '.schema_version | startswith("2.")' "$REGISTRY_FILE" \
-    || die "registry corruption detected: schema_version missing"
+    || die "registry schema_version missing"
+
   local tmp
   tmp="$(mktemp)"
   jq "$@" "$REGISTRY_FILE" > "$tmp"
@@ -116,22 +92,20 @@ write_registry() {
 
 repo_exists() {
   jq -e --arg o "$OWNER" --arg r "$REPO" \
-    '.orgs[$o].repos[$r] != null' "$REGISTRY_FILE" >/dev/null 2>&1
+    '.orgs[$o].repos[$r] != null' "$REGISTRY_FILE" >/dev/null
 }
 
-get_repo_state() {
-  jq -r --arg o "$OWNER" --arg r "$REPO" \
-    '.orgs[$o].repos[$r].state // "absent"' "$REGISTRY_FILE"
-}
+# ─────────────────────────────────────────────
 
 main() {
-  need_cmd jq
-  ensure_repo_root
   require_safe_git_state
+  ensure_repo_root
 
-  [[ $# -ge 1 ]] || { usage; exit 2; }
+  [[ $# -ge 1 ]] || usage
 
-  CMD="$1"; shift
+  ACTION="$1"
+  shift
+  readonly ACTION
 
   OWNER=""
   REPO=""
@@ -142,102 +116,69 @@ main() {
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --owner) shift; OWNER="${1:-}";;
-      --repo) shift; REPO="${1:-}";;
-      --telemetry) shift; TELEMETRY="${1:-}";;
-      --context) shift; CONTEXT="${1:-}";;
-      --reason) shift; REASON="${1:-}";;
-      --confirm-delete) CONFIRM_DELETE="true";;
-      -h|--help) usage; exit 0;;
-      *) die "unknown argument: $1";;
+      --owner) shift; OWNER="$1" ;;
+      --repo) shift; REPO="$1" ;;
+      --telemetry) shift; TELEMETRY="$1" ;;
+      --context) shift; CONTEXT="$1" ;;
+      --reason) shift; REASON="$1" ;;
+      --confirm-delete) CONFIRM_DELETE="true" ;;
+      *) die "unknown argument: $1" ;;
     esac
     shift
   done
 
-  [[ -n "$OWNER" ]] || die "--owner is required"
-  [[ -n "$REPO" ]] || die "--repo is required"
+  [[ -n "$OWNER" && -n "$REPO" ]] || die "--owner and --repo required"
 
-  case "$CMD" in
+  case "$ACTION" in
     register)
-      [[ -n "$TELEMETRY" ]] || die "--telemetry is required"
-      [[ -n "$CONTEXT" ]] || die "--context is required"
+      [[ -n "$TELEMETRY" && -n "$CONTEXT" ]] || die "register requires --telemetry and --context"
 
-      [[ "$TELEMETRY" != */* ]] || \
-        die "--telemetry must be repo-name only (owner is derived)"
-
-      [[ "$CONTEXT" == "sandbox" || "$CONTEXT" == "production" ]] || \
-        die "--context must be sandbox or production"
-
-      repo_exists && die "repo already registered: $OWNER/$REPO"
+      repo_exists && die "repo already registered"
 
       write_registry '
-        .orgs = (
-          .orgs // {}
-          | (if .[$o] == null then
-               .[$o] = { telemetry_repo: ($o + "/" + $t), repos: {} }
-             else .
-             end)
-          | (if .[$o].telemetry_repo == null then
-               .[$o].telemetry_repo = ($o + "/" + $t)
-             else .
-             end)
-          | .[$o].repos[$r] = {
-              "state": "enabled",
-              "context": $c,
-              "process": "infra-cli",
-              "reason": ($reason // "")
-            }
-        )
-      ' \
-        --arg o "$OWNER" \
-        --arg r "$REPO" \
-        --arg t "$TELEMETRY" \
-        --arg c "$CONTEXT" \
-        --arg reason "$REASON"
+        .orgs = (.orgs // {})
+        | .orgs[$o] = (.orgs[$o] // { telemetry_repo: ($o + "/" + $t), repos: {} })
+        | .orgs[$o].repos[$r] = {
+            state: "enabled",
+            context: $c,
+            process: "infra-cli",
+            reason: ($reason // "")
+          }
+      ' --arg o "$OWNER" --arg r "$REPO" --arg t "$TELEMETRY" --arg c "$CONTEXT" --arg reason "$REASON"
 
-      append_changelog
-
-      echo "infra: registered $CONTEXT repo $OWNER/$REPO"
+      append_changelog "register"
       ;;
 
     disable)
-      repo_exists || die "repo not registered: $OWNER/$REPO"
+      repo_exists || die "repo not registered"
 
       write_registry '
         .orgs[$o].repos[$r].state = "disabled"
         | .orgs[$o].repos[$r].process = "infra-cli"
-        | (if $reason != null then .orgs[$o].repos[$r].reason = $reason else . end)
+        | .orgs[$o].repos[$r].reason = ($reason // "")
       ' --arg o "$OWNER" --arg r "$REPO" --arg reason "$REASON"
 
-      append_changelog
-
-      echo "infra: disabled repo $OWNER/$REPO"
+      append_changelog "disable"
       ;;
 
     unregister)
-      repo_exists || die "repo not registered: $OWNER/$REPO"
-      [[ "$CONFIRM_DELETE" == "true" ]] || die "use --confirm-delete to unregister"
+      repo_exists || die "repo not registered"
+      [[ "$CONFIRM_DELETE" == "true" ]] || die "use --confirm-delete"
 
       write_registry 'del(.orgs[$o].repos[$r])' \
         --arg o "$OWNER" --arg r "$REPO"
 
-      append_changelog
-
-      echo "infra: unregistered repo $OWNER/$REPO"
+      append_changelog "unregister"
       ;;
 
     *)
-      usage
-      die "unknown command: $CMD"
+      die "unknown action: $ACTION"
       ;;
   esac
 
-  if [[ -x "scripts/infra/validate-registry-v2.sh" ]]; then
-    echo "infra: validating registry..."
-    ./scripts/infra/validate-registry-v2.sh
-  fi
+  [[ -x scripts/infra/validate-registry-v2.sh ]] && scripts/infra/validate-registry-v2.sh
 
-  echo "infra: done"
+  echo "infra: $ACTION completed for $OWNER/$REPO"
 }
 
 main "$@"

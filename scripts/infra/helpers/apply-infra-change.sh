@@ -17,7 +17,7 @@ set -euo pipefail
 #   apply-infra-change.sh <infra.sh args...>
 # ============================================================
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+ROOT_DIR="$(git rev-parse --show-toplevel)"
 cd "$ROOT_DIR"
 
 REGISTRY="infra/telemetry-registry.v2.json"

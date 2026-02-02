@@ -41,11 +41,11 @@ USAGE
 }
 
 require_safe_git_state() {
-  [[ "$(git rev-parse --abbrev-ref HEAD)" != "main" ]] \
-    || die "refusing to run on main"
+  local branch
+  branch="$(git rev-parse --abbrev-ref HEAD)"
 
-  [[ -z "$(git status --porcelain)" ]] \
-    || die "working tree must be clean"
+  [[ "$branch" != "main" ]] || die "refusing to run on main"
+  [[ -z "$(git status --porcelain)" ]] || die "working tree must be clean"
 }
 
 ensure_repo_root() {
@@ -58,6 +58,8 @@ append_changelog() {
   local action="$1"
   local ts
   ts="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+
+  echo "infra: appending changelog entry ($action)"
 
   jq -n \
     --arg timestamp "$ts" \
@@ -78,6 +80,8 @@ append_changelog() {
       process: "infra-cli",
       schema_version: "2.0"
     }' >> "$CHANGELOG_FILE"
+
+  sync
 }
 
 write_registry() {

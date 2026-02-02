@@ -113,7 +113,7 @@ GitHub enforces review and merge rules
 
 ## Primary Scripts
 
-scripts/infra/infra.sh
+scripts/infra/helpers/apply-infra-change.sh
 
 ### Purpose
 
@@ -121,19 +121,19 @@ Authoritative CLI for mutating the infra registry.
 
 ### Supported Commands
 
-infra.sh register 
+apply-infra-change.sh register 
   --owner <org> \
   --repo <repo> \
   --context <sandbox|production> \
   [--telemetry-repo <repo>] \
   [--reason <text>]
 
-infra.sh disable \
+apply-infra-change.sh disable \
   --owner <org> \
   --repo <repo> \
   [--reason <text>]
 
-infra.sh unregister \
+apply-infra-change.sh unregister \
   --owner <org> \
   --repo <repo> \
   --confirm-delete \
@@ -145,6 +145,9 @@ infra.sh unregister \
 - registry schema correctness
 - no implicit defaults
 - changelog
+- stages infra and changelog:
+    git add infra/telemetry-registry.v2.json
+    git add infra/chamgelog/infra-changelog.json
 
 scripts/infra/helpers/new-branch.sh
 Creates a correctly named feature branch.
@@ -153,14 +156,6 @@ Creates a correctly named feature branch.
 - must be run from main
 - refuses if working tree is dirty
 - standardizes branch creation
-
-scripts/infra/helpers/stage-infra-changes.sh
-Helper to reduce operator error.
-
-### What It Does
-- stages infra and changelog:
-    git add infra/telemetry-registry.v2.json
-    git add infra/chamgelog/infra-changelog.json
 
 scripts/infra/helpers/finalize-registry.sh
 Required before committing registry changes.
@@ -173,6 +168,16 @@ Required before committing registry changes.
 - confirms clean working tree
 
 This script prevents accidental or incomplete infra changes.
+
+scripts/infra/helpers/commit-and-push-infra.sh
+
+### What It Does
+- enforces branch safety
+- Enforces staged-only discipline
+- Enforces registry + changelog symmetry
+- Cannot mutate infra
+- Cannot open PR early
+- Ca0nnot silently include extra files
 
 scripts/infra/helpers/create-pr.sh
 Creates a PR from the current branch.
@@ -194,19 +199,16 @@ Registering a Repository
 
 scripts/infra/helpers/new-branch.sh infra/register-example
 
-scripts/infra/infra.sh register \
+scripts/infra/helpers/apply-infra-change.sh register \
   --<org> \
   --<repo> \
-  --context sandbox \
+  --context sandbox | production \
   --telemetry <telemetry-repo> \
   --reason "Why this repo exists"
 
-scripts/infra/helpers/stage-infra-changes.sh
-
 scripts/infra/helpers/finalize-registry.sh
 
-git commit -m "infra: register <org>/<repo>"
-git push -u origin infra/register-example
+scripts/infra/helpers/commit-and-push "infra: description"
 
 scripts/infra/helpers/create-pr.sh
 scripts/infra/helpers/merge-pr.sh

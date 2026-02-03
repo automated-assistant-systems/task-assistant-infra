@@ -59,7 +59,10 @@ append_changelog() {
   local ts
   ts="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
-  # Ensure exactly one newline before append if file is non-empty
+  local context="${CONTEXT:-}"
+  local telemetry="${TELEMETRY:-}"
+  local reason="${REASON:-}"
+
   if [[ -s "$CHANGELOG_FILE" ]]; then
     printf '\n' >> "$CHANGELOG_FILE"
   fi
@@ -69,9 +72,9 @@ append_changelog() {
     --arg action "$action" \
     --arg owner "$OWNER" \
     --arg repo "$REPO" \
-    --arg context "${CONTEXT:-}" \
-    --arg telemetry "$TELEMETRY" \
-    --arg reason "${REASON:-}" \
+    --arg context "$context" \
+    --arg telemetry "$telemetry" \
+    --arg reason "$reason" \
     '{
       timestamp: $timestamp,
       action: $action,

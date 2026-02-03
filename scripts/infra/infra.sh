@@ -152,23 +152,25 @@ main() {
     disable)
       repo_exists || die "repo not registered"
 
+      append_changelog "disable"
+
       write_registry '
         .orgs[$o].repos[$r].state = "disabled"
         | .orgs[$o].repos[$r].process = "infra-cli"
         | .orgs[$o].repos[$r].reason = ($reason // "")
       ' --arg o "$OWNER" --arg r "$REPO" --arg reason "$REASON"
 
-      append_changelog "disable"
       ;;
 
     unregister)
       repo_exists || die "repo not registered"
       [[ "$CONFIRM_DELETE" == "true" ]] || die "use --confirm-delete"
 
+      append_changelog "unregister"
+
       write_registry 'del(.orgs[$o].repos[$r])' \
         --arg o "$OWNER" --arg r "$REPO"
 
-      append_changelog "unregister"
       ;;
 
     *)

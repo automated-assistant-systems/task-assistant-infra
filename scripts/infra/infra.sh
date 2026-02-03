@@ -59,22 +59,14 @@ append_changelog() {
   local ts
   ts="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
-  local context="${CONTEXT:-}"
-  local telemetry="${TELEMETRY:-}"
-  local reason="${REASON:-}"
-
-  if [[ -s "$CHANGELOG_FILE" ]]; then
-    printf '\n' >> "$CHANGELOG_FILE"
-  fi
-
   jq -c -n \
     --arg timestamp "$ts" \
     --arg action "$action" \
     --arg owner "$OWNER" \
     --arg repo "$REPO" \
-    --arg context "$context" \
-    --arg telemetry "$telemetry" \
-    --arg reason "$reason" \
+    --arg context "${CONTEXT:-}" \
+    --arg telemetry "$TELEMETRY" \
+    --arg reason "${REASON:-}" \
     '{
       timestamp: $timestamp,
       action: $action,

@@ -59,9 +59,10 @@ append_changelog() {
   local ts
   ts="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
-  # Ensure newline before append (JSONL safety)
-  if [[ -s "$CHANGELOG_FILE" ]] && tail -c1 "$CHANGELOG_FILE" | read -r _; then
-    echo >> "$CHANGELOG_FILE"
+  # Ensure exactly one newline between JSONL records
+  if [[ -s "$CHANGELOG_FILE" ]]; then
+    last_char="$(tail -c1 "$CHANGELOG_FILE" || true)"
+    [[ "$last_char" == $'\n' ]] || echo >> "$CHANGELOG_FILE"
   fi
 
   jq -c -n \

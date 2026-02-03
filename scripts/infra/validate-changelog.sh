@@ -11,6 +11,9 @@ command -v jq >/dev/null 2>&1 || die "jq is required"
 
 echo "🔎 Validating infra changelog (jq)"
 
+grep -n '^[[:space:]]*$' "$CHANGELOG" \
+  && die "empty line detected in infra changelog"
+
 LINE_NO=0
 
 while IFS= read -r line; do

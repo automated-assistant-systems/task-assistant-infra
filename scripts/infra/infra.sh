@@ -56,28 +56,36 @@ ensure_repo_root() {
 
 append_changelog() {
   local action="$1"
-  local ts
+  local ts json
+
   ts="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
-  jq -c -n \
-    --arg timestamp "$ts" \
-    --arg action "$action" \
-    --arg owner "$OWNER" \
-    --arg repo "$REPO" \
-    --arg context "${CONTEXT:-}" \
-    --arg telemetry "$TELEMETRY" \
-    --arg reason "${REASON:-}" \
-    '{
-      timestamp: $timestamp,
-      action: $action,
-      owner: $owner,
-      repo: $repo,
-      context: ($context | select(length > 0)),
-      telemetry_repo: ($telemetry | select(length > 0)),
-      reason: ($reason | select(length > 0)),
-      process: "infra-cli",
-      schema_version: "2.0"
-    }' >> "$CHANGELOG_FILE"
+  json="$(
+    jq -c -n \
+      --arg timestamp "$ts" \
+      --arg action "$action" \
+      --arg owner "$OWNER" \
+      --arg repo "$REPO" \
+      --arg context "${CONTEXT:-}" \
+      --arg telemetry "$TELEMETRY" \
+      --arg reason "${REASON:-}" \
+      '{
+        timestamp: $timestamp,
+        action: $action,
+        owner: $owner,
+        repo: $repo,
+        context: ( $context | if length > 0 then . else null end ),
+        telemetry_repo: ( $telemetry | if length > 0 then . else null end ),
+        reason: ( $reason | if length > 0 then . else null end ),
+        process: "infra-cli",
+        schema_version: "2.0"
+      }
+      | del(.[] | null)'
+  )"
+
+  [[ -n "$json" ]] || die "failed to generate changelog entry"
+
+  printf '%s\n' "$json" >> "$CHANGELOG_FILE"
 }
 
 write_registry() {

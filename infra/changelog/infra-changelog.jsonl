@@ -1,4 +1,3 @@
-{"timestamp":"2026-02-02T03:07:32Z","action":"register","owner":"garybayes","repo":"ta-sandbox","telemetry_repo":"task-assistant-telemetry","context":"sandbox","reason":"Phase 3.4 validation sandbox onboarding","process":"infra-cli","schema_version":"2.0"}
 {"timestamp":"2026-02-02T23:31:33Z","action":"register","owner":"garybayes","repo":"ta-sandbox","context":"sandbox","telemetry_repo":"task-assistant-telemetry","reason":"Phase 3.4 validation sandbox onboarding","process":"infra-cli","schema_version":"2.0"}
 {"timestamp":"2026-02-04T02:19:02Z","action":"disable","owner":"garybayes","repo":"ta-sandbox","reason":"Phase 3.4 validation sandbox disabled","process":"infra-cli","schema_version":"2.0"}
 {"timestamp":"2026-02-04T02:24:15Z","action":"unregister","owner":"garybayes","repo":"ta-sandbox","reason":"Phase 3.4 validation sandbox unregistered","process":"infra-cli","schema_version":"2.0"}

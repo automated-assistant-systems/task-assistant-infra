@@ -80,7 +80,7 @@ append_changelog() {
         process: "infra-cli",
         schema_version: "2.0"
       }
-      | del(.[] | null)'
+      | with_entries(select(.value != null))'
   )"
 
   [[ -n "$json" ]] || die "failed to generate changelog entry"

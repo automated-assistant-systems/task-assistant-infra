@@ -84,5 +84,7 @@ echo "✅ Infra committed and pushed"
 echo "• Branch: $BRANCH"
 echo "• Commit: $MSG"
 echo
-echo "Next step:"
+echo "Next steps:"
 echo "  scripts/infra/helpers/create-pr.sh"
+echo "  scripts/infra/helpers/merge-pr.sh"
+echo

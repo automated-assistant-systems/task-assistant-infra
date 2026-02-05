@@ -28,7 +28,7 @@ while IFS= read -r line; do
     .repo and
     .process == "infra-cli" and
     .schema_version == "2.0" and
-    (.action | IN("register","disable","unregister")) and
+    (.action | IN("register","enable","disable","unregister")) and
     (
       (has("context") | not) or
       (.context | IN("sandbox","production"))

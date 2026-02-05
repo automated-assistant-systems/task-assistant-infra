@@ -26,6 +26,15 @@ CHANGELOG="infra/changelog/infra-changelog.jsonl"
 die() { echo "❌ infra: $*" >&2; exit 1; }
 pass() { echo "✅ $*"; }
 
+case "$ACTION" in
+  register|disable|enable|unregister)
+    ;;
+  *)
+    echo "Invalid infra action: $ACTION"
+    exit 1
+    ;;
+esac
+
 # ------------------------------------------------------------
 # Preconditions
 # ------------------------------------------------------------

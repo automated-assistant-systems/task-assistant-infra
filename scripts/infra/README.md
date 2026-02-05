@@ -128,6 +128,11 @@ apply-infra-change.sh register
   [--telemetry-repo <repo>] \
   [--reason <text>]
 
+apply-infra-change.sh enable \
+  --owner <org> \
+  --repo <repo> \
+  [--reason <text>]
+
 apply-infra-change.sh disable \
   --owner <org> \
   --repo <repo> \

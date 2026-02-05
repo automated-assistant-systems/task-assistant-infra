@@ -12,6 +12,7 @@ set -euo pipefail
 #
 # Commands
 #   infra.sh register   --owner <org> --repo <repo> --telemetry <repo> --context <sandbox|production> [--reason <text>]
+#   infra.sh enable     --owner <org> --repo <repo> [--reason <text>]
 #   infra.sh disable    --owner <org> --repo <repo> [--reason <text>]
 #   infra.sh unregister --owner <org> --repo <repo> --confirm-delete [--reason <text>]
 #
@@ -155,6 +156,25 @@ main() {
       ' --arg o "$OWNER" --arg r "$REPO" --arg t "$TELEMETRY" --arg c "$CONTEXT" --arg reason "$REASON"
 
       append_changelog "register"
+      ;;
+
+    enable)
+      repo_exists || die "repo not registered"
+
+      # Ensure current state is disabled
+      jq -e --arg o "$OWNER" --arg r "$REPO" \
+        '.orgs[$o].repos[$r].state == "disabled"' \
+        "$REGISTRY_FILE" >/dev/null \
+        || die "repo is not disabled"
+
+      append_changelog "enable"
+
+      write_registry '
+        .orgs[$o].repos[$r].state = "enabled"
+        | .orgs[$o].repos[$r].process = "infra-cli"
+        | .orgs[$o].repos[$r].reason = ($reason // "")
+      ' --arg o "$OWNER" --arg r "$REPO" --arg reason "$REASON"
+
       ;;
 
     disable)

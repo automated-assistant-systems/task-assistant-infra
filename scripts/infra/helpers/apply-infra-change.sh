@@ -68,7 +68,7 @@ echo
 echo "🚀 Running infra.sh $*"
 echo
 
-scripts/infra/infra.sh "$@"
+scripts/infra/infra.sh "$ACTION" "$@"
 
 tail -n 1 "$CHANGELOG" | jq . >/dev/null \
   || die "last changelog entry is not valid JSON"

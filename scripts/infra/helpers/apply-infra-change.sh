@@ -26,6 +26,12 @@ CHANGELOG="infra/changelog/infra-changelog.jsonl"
 die() { echo "❌ infra: $*" >&2; exit 1; }
 pass() { echo "✅ $*"; }
 
+[[ $# -ge 1 ]] || die "missing infra action"
+
+ACTION="$1"
+shift
+readonly ACTION
+
 case "$ACTION" in
   register|disable|enable|unregister)
     ;;
